@@ -75,6 +75,15 @@ final class EventPlayer {
                          wheel1: Int32(event.dy),
                          wheel2: Int32(event.dx),
                          wheel3: 0)
+        case .screenshot:
+            // Synthesize ⌘⇧4 to trigger macOS screenshot selection.
+            let down = CGEvent(keyboardEventSource: source, virtualKey: 0x15, keyDown: true)
+            down?.flags = [.maskCommand, .maskShift]
+            down?.post(tap: .cgSessionEventTap)
+            let up = CGEvent(keyboardEventSource: source, virtualKey: 0x15, keyDown: false)
+            up?.flags = [.maskCommand, .maskShift]
+            up?.post(tap: .cgSessionEventTap)
+            cg = nil
         }
         cg?.post(tap: .cgSessionEventTap)
     }

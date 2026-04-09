@@ -9,6 +9,7 @@ struct RecordedEvent: Codable {
         case rightDown, rightUp
         case otherDown, otherUp
         case scroll
+        case screenshot
     }
 
     var kind: Kind

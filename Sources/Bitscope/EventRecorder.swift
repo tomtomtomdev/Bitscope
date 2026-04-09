@@ -27,7 +27,8 @@ final class EventRecorder {
             .leftMouseDown, .leftMouseUp, .leftMouseDragged,
             .rightMouseDown, .rightMouseUp, .rightMouseDragged,
             .otherMouseDown, .otherMouseUp, .otherMouseDragged,
-            .scrollWheel
+            .scrollWheel,
+            .keyDown
         ]
         var mask: CGEventMask = 0
         for t in types {
@@ -104,6 +105,18 @@ final class EventRecorder {
             kind = .scroll
             dy = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1))
             dx = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis2))
+        case .keyDown:
+            // Detect ⌘⇧4 (macOS screenshot selection shortcut).
+            // Keycode 21 = "4" on all keyboard layouts.
+            let flags = event.flags
+            let keycode = event.getIntegerValueField(.keyboardEventKeycode)
+            if keycode == 21,
+               flags.contains(.maskCommand),
+               flags.contains(.maskShift) {
+                kind = .screenshot
+            } else {
+                kind = nil
+            }
         default:
             kind = nil
         }
@@ -131,6 +144,10 @@ final class EventRecorder {
         case .otherDown:
             ClickLogger.shared.logClick(button: "other", x: Double(loc.x), y: Double(loc.y))
             actionEnricher?.enqueueClick(kind: "click_other",
+                                         x: Double(loc.x), y: Double(loc.y),
+                                         ts: wallClockTS)
+        case .screenshot:
+            actionEnricher?.enqueueClick(kind: "screenshot",
                                          x: Double(loc.x), y: Double(loc.y),
                                          ts: wallClockTS)
         default:
