@@ -20,3 +20,5 @@ upon permission granted, "accessibility permission needed" should go away
 prevent double instance on menu bar
 hide record button when accessibility not granted
 add quit button on menu bar options
+
+add button to play all recording in series

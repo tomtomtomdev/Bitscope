@@ -5,7 +5,14 @@ import Combine
 final class RecordingStore: ObservableObject {
     @Published private(set) var recordings: [Recording] = []
 
-    private let directory: URL
+    let directory: URL
+
+    /// On-disk path where a given recording's JSON file lives (or would
+    /// live). Exposed so callers like the database layer can store a
+    /// stable pointer to the portable JSON representation.
+    func url(for recording: Recording) -> URL {
+        directory.appendingPathComponent("\(recording.id.uuidString).json")
+    }
     private let encoder: JSONEncoder = {
         let e = JSONEncoder()
         e.outputFormatting = [.prettyPrinted, .sortedKeys]

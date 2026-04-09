@@ -118,6 +118,18 @@ struct ContentView: View {
             }
             .help("Revokes Accessibility trust for Bitscope via tccutil")
             Spacer()
+            if model.isTrusted && !model.store.recordings.isEmpty {
+                Button {
+                    if model.isPlaying {
+                        model.stopPlayback()
+                    } else {
+                        model.playAll()
+                    }
+                } label: {
+                    Label(model.isPlaying ? "Stop" : "Play All",
+                          systemImage: model.isPlaying ? "stop.fill" : "play.fill")
+                }
+            }
             Button("Delete All", role: .destructive) {
                 showDeleteAllConfirm = true
             }

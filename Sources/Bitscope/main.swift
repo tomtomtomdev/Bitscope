@@ -99,6 +99,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         button.image?.isTemplate = !model.isRecording
         button.contentTintColor = model.isRecording ? .systemRed : nil
     }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        // Give the current session a proper `ended_at` timestamp.
+        model.shutdown()
+    }
 }
 
 MainActor.assumeIsolated {

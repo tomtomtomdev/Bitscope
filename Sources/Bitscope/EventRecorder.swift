@@ -10,6 +10,10 @@ final class EventRecorder {
     private var startTime: CFAbsoluteTime = 0
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    /// Optional enricher that promotes raw clicks into queryable actions.
+    /// Set by `AppModel` on initialization; nil if the database failed to
+    /// open (in which case capture still works, just without the index).
+    var actionEnricher: ActionEnricher?
 
     func start() -> Bool {
         guard !isRecording else { return true }
@@ -112,13 +116,23 @@ final class EventRecorder {
 
         // Persist click coordinates to a standalone log so they can be
         // inspected independently of the JSON recording file.
+        let wallClockTS = Date().timeIntervalSince1970
         switch kind {
         case .leftDown:
             ClickLogger.shared.logClick(button: "left", x: Double(loc.x), y: Double(loc.y))
+            actionEnricher?.enqueueClick(kind: "click_left",
+                                         x: Double(loc.x), y: Double(loc.y),
+                                         ts: wallClockTS)
         case .rightDown:
             ClickLogger.shared.logClick(button: "right", x: Double(loc.x), y: Double(loc.y))
+            actionEnricher?.enqueueClick(kind: "click_right",
+                                         x: Double(loc.x), y: Double(loc.y),
+                                         ts: wallClockTS)
         case .otherDown:
             ClickLogger.shared.logClick(button: "other", x: Double(loc.x), y: Double(loc.y))
+            actionEnricher?.enqueueClick(kind: "click_other",
+                                         x: Double(loc.x), y: Double(loc.y),
+                                         ts: wallClockTS)
         default:
             break
         }
