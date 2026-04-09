@@ -53,10 +53,13 @@ Bitscope spec
       state per node, and stamps app bundle id / name / pid on the
       root
 
+- [x] **JSONL daily export** — `JSONLExporter` streams new actions into
+      `~/Library/Application Support/Bitscope/export/actions-YYYY-MM-DD.jsonl`
+      (incremental via `meta['jsonl_last_exported_action_id']`); runs on
+      launch and after each recording save
+
 ### Planned (not yet implemented)
 
-- [ ] Step 5: daily JSONL export of `actions` for agent/tool
-      consumption
 - [ ] Step 6: screenshot + Vision OCR fallback when the AX tree at a
       click site is empty or `AXUnknown`; populate reserved
       `screenshot_hash` / `ocr_text` columns

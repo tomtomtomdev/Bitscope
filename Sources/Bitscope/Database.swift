@@ -100,6 +100,16 @@ final class Database {
             try db.create(indexOn: "actions", columns: ["ax_dom_identifier"])
         }
 
+        m.registerMigration("v3_meta_kv") { db in
+            // Generic key-value table for cursors and small bits of
+            // persistent state that don't deserve their own table —
+            // e.g. the JSONL exporter's high-water-mark action id.
+            try db.create(table: "meta") { t in
+                t.column("key", .text).primaryKey()
+                t.column("value", .text).notNull()
+            }
+        }
+
         return m
     }
 
@@ -164,6 +174,72 @@ final class Database {
 
     // MARK: - Action inserts
 
+    // MARK: - Meta key-value
+
+    func getMeta(_ key: String) -> String? {
+        try? dbQueue.read { db in
+            try String.fetchOne(db,
+                sql: "SELECT value FROM meta WHERE key = ?",
+                arguments: [key])
+        }
+    }
+
+    func setMeta(_ key: String, _ value: String) throws {
+        try dbQueue.write { db in
+            try db.execute(sql: """
+                INSERT INTO meta (key, value) VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """, arguments: [key, value])
+        }
+    }
+
+    // MARK: - Action queries
+
+    /// Fetches all action rows with `id > afterID`, newest ones last.
+    /// Used by the JSONL exporter to stream only the delta since its
+    /// last high-water mark.
+    func actionsAfter(id afterID: Int64, limit: Int = 10_000) throws -> [ActionExportRow] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, recording_id, session_id, ts, kind, x, y,
+                       app_bundle_id, app_name, window_title,
+                       ax_role, ax_subrole, ax_identifier, ax_title, ax_value,
+                       ax_help, ax_dom_identifier, ax_dom_class_list,
+                       ax_frame_json, url, source, screenshot_hash, ocr_text
+                  FROM actions
+                 WHERE id > ?
+                 ORDER BY id ASC
+                 LIMIT ?
+                """, arguments: [afterID, limit])
+            return rows.map { row in
+                ActionExportRow(
+                    id: row["id"],
+                    recordingID: row["recording_id"],
+                    sessionID: row["session_id"],
+                    ts: row["ts"],
+                    kind: row["kind"],
+                    x: row["x"], y: row["y"],
+                    appBundleID: row["app_bundle_id"],
+                    appName: row["app_name"],
+                    windowTitle: row["window_title"],
+                    axRole: row["ax_role"],
+                    axSubrole: row["ax_subrole"],
+                    axIdentifier: row["ax_identifier"],
+                    axTitle: row["ax_title"],
+                    axValue: row["ax_value"],
+                    axHelp: row["ax_help"],
+                    axDomIdentifier: row["ax_dom_identifier"],
+                    axDomClassList: row["ax_dom_class_list"],
+                    axFrameJSON: row["ax_frame_json"],
+                    url: row["url"],
+                    source: row["source"],
+                    screenshotHash: row["screenshot_hash"],
+                    ocrText: row["ocr_text"]
+                )
+            }
+        }
+    }
+
     func insertAction(_ action: ActionRow) throws {
         try dbQueue.write { db in
             try db.execute(sql: """
@@ -190,6 +266,35 @@ final class Database {
 
 /// Flat row for inserting into `actions`. Mirrors the schema one-to-one so
 /// the enricher can produce one of these and hand it to `Database`.
+/// Flat row used by the JSONL exporter — same shape as `ActionRow` but
+/// carries the auto-incremented primary key so the exporter can track
+/// its high-water mark.
+struct ActionExportRow {
+    var id: Int64
+    var recordingID: String?
+    var sessionID: String?
+    var ts: TimeInterval
+    var kind: String
+    var x: Double?
+    var y: Double?
+    var appBundleID: String?
+    var appName: String?
+    var windowTitle: String?
+    var axRole: String?
+    var axSubrole: String?
+    var axIdentifier: String?
+    var axTitle: String?
+    var axValue: String?
+    var axHelp: String?
+    var axDomIdentifier: String?
+    var axDomClassList: String?
+    var axFrameJSON: String?
+    var url: String?
+    var source: String
+    var screenshotHash: String?
+    var ocrText: String?
+}
+
 struct ActionRow {
     var recordingID: String?
     var sessionID: String?

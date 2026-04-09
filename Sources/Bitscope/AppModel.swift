@@ -28,6 +28,7 @@ final class AppModel: ObservableObject {
     /// disabled" rather than taking down the whole app.
     private let database: Database?
     private let enricher: ActionEnricher
+    private let jsonlExporter: JSONLExporter?
 
     init() {
         let db: Database?
@@ -39,8 +40,11 @@ final class AppModel: ObservableObject {
         }
         self.database = db
         self.enricher = ActionEnricher(database: db)
+        self.jsonlExporter = db.map { JSONLExporter(database: $0) }
         self.recorder.actionEnricher = enricher
         self.enricher.startSession()
+        // Export any actions that accumulated since the last launch.
+        jsonlExporter?.exportPending()
         startPermissionPolling()
     }
 
@@ -163,6 +167,9 @@ final class AppModel: ObservableObject {
 
         status = "Saved \(name) — \(events.count) events"
         onStateChange?()
+        // Flush new actions to JSONL so external tools can consume them
+        // without waiting for the next app launch.
+        jsonlExporter?.exportPending()
     }
 
     func play(_ recording: Recording) {
