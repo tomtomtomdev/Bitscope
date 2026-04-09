@@ -129,4 +129,8 @@ Bitscope spec
       events but suppresses click enrichment; on leftUp emits a single
       `"screenshot_select"` action with the drag origin coordinates
 
+- [x] **Space key detection** — records space bar presses (keycode 49)
+      as `.keyPress` events during recording; enriched as `"key_space"`
+      actions; replayed by synthesizing key down/up via `CGEvent`
+
 ### Planned (not yet implemented)

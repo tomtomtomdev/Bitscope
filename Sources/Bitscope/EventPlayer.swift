@@ -84,6 +84,14 @@ final class EventPlayer {
             up?.flags = [.maskCommand, .maskShift]
             up?.post(tap: .cgSessionEventTap)
             cg = nil
+        case .keyPress:
+            // Synthesize key down + up for the stored virtual keycode.
+            let vk = UInt16(event.button)
+            let kd = CGEvent(keyboardEventSource: source, virtualKey: vk, keyDown: true)
+            kd?.post(tap: .cgSessionEventTap)
+            let ku = CGEvent(keyboardEventSource: source, virtualKey: vk, keyDown: false)
+            ku?.post(tap: .cgSessionEventTap)
+            cg = nil
         }
         cg?.post(tap: .cgSessionEventTap)
     }

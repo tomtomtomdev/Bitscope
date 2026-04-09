@@ -10,6 +10,7 @@ struct RecordedEvent: Codable {
         case otherDown, otherUp
         case scroll
         case screenshot
+        case keyPress
     }
 
     var kind: Kind
@@ -20,6 +21,7 @@ struct RecordedEvent: Codable {
     var dx: Double = 0
     var dy: Double = 0
     // Mouse button number for `other*` events.
+    // Also stores the virtual keycode for `keyPress` events.
     var button: Int = 0
 }
 

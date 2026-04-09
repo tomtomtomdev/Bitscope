@@ -112,10 +112,10 @@ final class EventRecorder {
             dy = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis1))
             dx = Double(event.getIntegerValueField(.scrollWheelEventPointDeltaAxis2))
         case .keyDown:
-            // Detect ⌘⇧4 (macOS screenshot selection shortcut).
-            // Keycode 21 = "4" on all keyboard layouts.
             let flags = event.flags
             let keycode = event.getIntegerValueField(.keyboardEventKeycode)
+            // Detect ⌘⇧4 (macOS screenshot selection shortcut).
+            // Keycode 21 = "4" on all keyboard layouts.
             if keycode == 21,
                flags.contains(.maskCommand),
                flags.contains(.maskShift) {
@@ -124,6 +124,10 @@ final class EventRecorder {
                 // the selection rectangle.
                 screenshotDragArmed = true
                 screenshotDragOrigin = nil
+            } else if keycode == 49 {
+                // Space bar (keycode 49).
+                kind = .keyPress
+                button = 49
             } else {
                 kind = nil
             }
@@ -182,6 +186,10 @@ final class EventRecorder {
                                          ts: wallClockTS)
         case .screenshot:
             actionEnricher?.enqueueClick(kind: "screenshot",
+                                         x: Double(loc.x), y: Double(loc.y),
+                                         ts: wallClockTS)
+        case .keyPress:
+            actionEnricher?.enqueueClick(kind: "key_space",
                                          x: Double(loc.x), y: Double(loc.y),
                                          ts: wallClockTS)
         default:
