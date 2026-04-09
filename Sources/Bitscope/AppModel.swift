@@ -139,7 +139,7 @@ final class AppModel: ObservableObject {
     private var pendingSnapshot: [ScreenElement] = []
     private var pendingRecordingID: UUID?
 
-    private func stopRecording() {
+    func stopRecording() {
         let (events, duration) = recorder.stop()
         isRecording = false
         let id = pendingRecordingID ?? UUID()

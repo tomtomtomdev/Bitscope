@@ -8,7 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
-    private var monitor: Any?
+    private var globalHotkeyMonitor: Any?
+    private var localHotkeyMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Prevent a second Bitscope from attaching a duplicate status item.
@@ -46,6 +47,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Reflect recording state in the menu-bar glyph.
         model.onStateChange = { [weak self] in
             self?.updateStatusIcon()
+        }
+
+        installGlobalHotkey()
+    }
+
+    /// Installs a global ⌘⇧S hotkey that stops recording or replay,
+    /// whichever is currently active. Uses both a global monitor (app not
+    /// focused) and a local monitor (app focused) so it works regardless
+    /// of popover visibility.
+    private func installGlobalHotkey() {
+        let handler: (NSEvent) -> Bool = { [weak self] event in
+            guard let self,
+                  event.modifierFlags.contains([.command, .shift]),
+                  event.charactersIgnoringModifiers?.lowercased() == "s" else {
+                return false
+            }
+            if self.model.isPlaying {
+                self.model.stopPlayback()
+                return true
+            } else if self.model.isRecording {
+                self.model.stopRecording()
+                return true
+            }
+            return false
+        }
+
+        globalHotkeyMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: .keyDown
+        ) { event in
+            _ = handler(event)
+        }
+
+        localHotkeyMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: .keyDown
+        ) { event in
+            handler(event) ? nil : event
         }
     }
 
@@ -101,6 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if let m = globalHotkeyMonitor { NSEvent.removeMonitor(m) }
+        if let m = localHotkeyMonitor { NSEvent.removeMonitor(m) }
         // Give the current session a proper `ended_at` timestamp.
         model.shutdown()
     }

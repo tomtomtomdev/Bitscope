@@ -58,8 +58,6 @@ Bitscope spec
       (incremental via `meta['jsonl_last_exported_action_id']`); runs on
       launch and after each recording save
 
-### Planned (not yet implemented)
-
 - [x] **Screenshot + Vision OCR fallback** — when the AX hit is nil,
       `AXUnknown`, or has no title/value/identifier, captures a 400×400
       patch via `CGWindowListCreateImage`, stores it content-addressed
@@ -82,3 +80,11 @@ Bitscope spec
       `ax_title`, `ax_value`, `ocr_text`, `window_title` with
       insert/delete/update triggers; `Database.searchActions(query:)`
       returns matching action IDs by relevance
+
+- [x] **Global hotkey ⌘⇧S** — stops recording or replay from anywhere
+      (global + local `NSEvent` monitors); prioritises stopping playback
+      if both states are somehow active
+
+### Planned (not yet implemented)
+
+- [ ] 
