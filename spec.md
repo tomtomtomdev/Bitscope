@@ -124,4 +124,9 @@ Bitscope spec
       - Model persists history at `~/Library/Application Support/Bitscope/trading/`
       - Requires multiple days of data for meaningful signals
 
+- [x] **Screenshot drag tracking** — after ⌘⇧4, the selection drag
+      (leftDown → leftDragged → leftUp) is recorded as normal mouse
+      events but suppresses click enrichment; on leftUp emits a single
+      `"screenshot_select"` action with the drag origin coordinates
+
 ### Planned (not yet implemented)

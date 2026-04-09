@@ -14,6 +14,10 @@ final class EventRecorder {
     /// Set by `AppModel` on initialization; nil if the database failed to
     /// open (in which case capture still works, just without the index).
     var actionEnricher: ActionEnricher?
+    /// Tracks the ⌘⇧4 screenshot selection drag so we can suppress click
+    /// enrichment and emit a single screenshot_select action on completion.
+    private var screenshotDragArmed = false
+    private var screenshotDragOrigin: CGPoint?
 
     func start() -> Bool {
         guard !isRecording else { return true }
@@ -68,6 +72,8 @@ final class EventRecorder {
         eventTap = nil
         runLoopSource = nil
         isRecording = false
+        screenshotDragArmed = false
+        screenshotDragOrigin = nil
         let duration = CFAbsoluteTimeGetCurrent() - startTime
         return (events, duration)
     }
@@ -114,6 +120,10 @@ final class EventRecorder {
                flags.contains(.maskCommand),
                flags.contains(.maskShift) {
                 kind = .screenshot
+                // Arm screenshot drag tracking — the next leftDown starts
+                // the selection rectangle.
+                screenshotDragArmed = true
+                screenshotDragOrigin = nil
             } else {
                 kind = nil
             }
@@ -130,6 +140,30 @@ final class EventRecorder {
         // Persist click coordinates to a standalone log so they can be
         // inspected independently of the JSON recording file.
         let wallClockTS = Date().timeIntervalSince1970
+
+        // Screenshot drag tracking: after ⌘⇧4 is detected, the next
+        // leftDown starts the selection and leftUp completes it. We
+        // suppress normal click enrichment during this window and emit
+        // a single "screenshot_select" action at the end.
+        if screenshotDragArmed {
+            switch kind {
+            case .leftDown:
+                screenshotDragOrigin = loc
+                return  // suppress click enrichment
+            case .leftUp:
+                let origin = screenshotDragOrigin ?? loc
+                screenshotDragArmed = false
+                screenshotDragOrigin = nil
+                actionEnricher?.enqueueClick(kind: "screenshot_select",
+                                             x: Double(origin.x), y: Double(origin.y),
+                                             ts: wallClockTS)
+                return
+            default:
+                break  // mouseMove etc. — record normally, no enrichment
+            }
+            return
+        }
+
         switch kind {
         case .leftDown:
             ClickLogger.shared.logClick(button: "left", x: Double(loc.x), y: Double(loc.y))
