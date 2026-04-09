@@ -133,4 +133,16 @@ Bitscope spec
       as `.keyPress` events during recording; enriched as `"key_space"`
       actions; replayed by synthesizing key down/up via `CGEvent`
 
+- [x] **Desktop screenshot OCR** — two paths: (1) after ⌘⇧4 completes
+      during recording, polls for the new file; (2) on launch and after
+      each recording, `scanDesktopScreenshots` finds all `Screenshot*.png`
+      files on Desktop (respects `screencapture` location), skips ones
+      already in the DB by URL, stores PNGs in blob store, runs Vision OCR
+      with redaction, and inserts `screenshot_select` action rows
+
+- [x] **Screenshot OCR in popover** — "Screenshot OCR" section in the
+      menu-bar popover shows recent screenshot OCR results with extracted
+      text, timestamp, and filename; refreshed on launch and after each
+      recording; `Database.recentScreenshots()` query backs the view
+
 ### Planned (not yet implemented)

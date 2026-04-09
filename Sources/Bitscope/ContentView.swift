@@ -12,10 +12,14 @@ struct ContentView: View {
                 permissionBanner
             }
             recordingsList
+            if !model.screenshots.isEmpty {
+                Divider()
+                screenshotsList
+            }
             Divider()
             footer
         }
-        .frame(width: 420, height: 460)
+        .frame(width: 420, height: 520)
     }
 
     private var header: some View {
@@ -110,6 +114,41 @@ struct ContentView: View {
                 Image(systemName: "trash")
             }
             .buttonStyle(.borderless)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var screenshotsList: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Screenshot OCR").font(.caption).bold()
+                .padding(.horizontal, 12).padding(.top, 6)
+            List {
+                ForEach(model.screenshots) { shot in
+                    screenshotRow(for: shot)
+                }
+            }
+            .listStyle(.inset)
+            .frame(maxHeight: 140)
+        }
+    }
+
+    private func screenshotRow(for shot: ScreenshotResult) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(shot.ocrText)
+                .font(.caption)
+                .lineLimit(3)
+            HStack {
+                Text(shot.date, style: .time)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                if let path = shot.url {
+                    Text(URL(fileURLWithPath: path).lastPathComponent)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+            }
         }
         .padding(.vertical, 2)
     }

@@ -10,6 +10,7 @@ final class AppModel: ObservableObject {
     @Published var isPlaying = false
     @Published var isWatchingScreenshots = false
     @Published var status: String = "Idle"
+    @Published var screenshots: [ScreenshotResult] = []
 
     /// Called whenever user-visible state (recording/playing) changes so the
     /// menu-bar icon can be refreshed.
@@ -208,6 +209,7 @@ final class AppModel: ObservableObject {
         // Flush new actions to JSONL so external tools can consume them
         // without waiting for the next app launch.
         jsonlExporter?.exportPending()
+        scanAndRefreshScreenshots()
     }
 
     func play(_ recording: Recording) {
@@ -224,6 +226,7 @@ final class AppModel: ObservableObject {
             self?.isPlaying = false
             self?.status = "Finished \(recording.name)"
             self?.onStateChange?()
+            self?.scanAndRefreshScreenshots()
         }
     }
 
@@ -258,6 +261,7 @@ final class AppModel: ObservableObject {
             isPlaying = false
             status = "Finished playing all recordings"
             onStateChange?()
+            scanAndRefreshScreenshots()
             return
         }
         let next = playbackQueue.removeFirst()
@@ -288,6 +292,24 @@ final class AppModel: ObservableObject {
         try? database?.deleteAllRecordings()
         blobStore.deleteAll()
         status = "All recordings deleted"
+    }
+
+    /// Scans Desktop for new screenshots, then refreshes the UI list.
+    func scanAndRefreshScreenshots() {
+        enricher.scanDesktopScreenshots()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.refreshScreenshots()
+        }
+    }
+
+    func refreshScreenshots() {
+        guard let database else { screenshots = []; return }
+        do {
+            screenshots = try database.recentScreenshots()
+        } catch {
+            NSLog("Bitscope: failed to load screenshots: \(error)")
+            screenshots = []
+        }
     }
 
     private static func timestampName() -> String {

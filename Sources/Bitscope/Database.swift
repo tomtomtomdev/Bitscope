@@ -314,6 +314,42 @@ final class Database {
         }
     }
 
+    /// Returns the most recent screenshot_select actions that have OCR text.
+    func recentScreenshots(limit: Int = 20) throws -> [ScreenshotResult] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, ts, x, y, ocr_text, screenshot_hash, url
+                  FROM actions
+                 WHERE kind = 'screenshot_select' AND ocr_text IS NOT NULL
+                 ORDER BY ts DESC
+                 LIMIT ?
+                """, arguments: [limit])
+            return rows.map { row in
+                ScreenshotResult(
+                    id: row["id"],
+                    ts: row["ts"],
+                    x: row["x"] ?? 0,
+                    y: row["y"] ?? 0,
+                    ocrText: row["ocr_text"] ?? "",
+                    screenshotHash: row["screenshot_hash"],
+                    url: row["url"]
+                )
+            }
+        }
+    }
+
+    /// Returns the set of `url` values already stored for screenshot_select
+    /// actions so the desktop scanner can skip files it has already processed.
+    func knownScreenshotURLs() throws -> Set<String> {
+        try dbQueue.read { db in
+            let urls = try String.fetchAll(db, sql: """
+                SELECT url FROM actions
+                 WHERE kind = 'screenshot_select' AND url IS NOT NULL
+                """)
+            return Set(urls)
+        }
+    }
+
     func insertAction(_ action: ActionRow) throws {
         try dbQueue.write { db in
             try db.execute(sql: """
@@ -392,4 +428,17 @@ struct ActionRow {
     var source: String            // "ax" | "ocr" | "hybrid" | "none"
     var screenshotHash: String?
     var ocrText: String?
+}
+
+/// Lightweight model for displaying screenshot OCR results in the UI.
+struct ScreenshotResult: Identifiable {
+    var id: Int64
+    var ts: TimeInterval
+    var x: Double
+    var y: Double
+    var ocrText: String
+    var screenshotHash: String?
+    var url: String?
+
+    var date: Date { Date(timeIntervalSince1970: ts) }
 }

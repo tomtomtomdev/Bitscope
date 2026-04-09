@@ -69,6 +69,14 @@ final class ActionEnricher {
 
     private func handleClick(kind: String, x: Double, y: Double, ts: TimeInterval) {
         guard let database else { return }
+
+        // For screenshot_select actions, find the desktop screenshot and
+        // run OCR on it instead of AX hit-testing.
+        if kind == "screenshot_select" {
+            handleScreenshotSelect(database: database, x: x, y: y, ts: ts)
+            return
+        }
+
         let point = CGPoint(x: x, y: y)
         let hit = ScreenReader.hitElement(at: point)
 
@@ -143,6 +151,184 @@ final class ActionEnricher {
             try database.insertAction(row)
         } catch {
             NSLog("ActionEnricher: failed to insert action: \(error)")
+        }
+    }
+
+    // MARK: - Desktop screenshot OCR
+
+    /// After a ⌘⇧4 drag completes, macOS writes a screenshot file to the
+    /// Desktop (or the configured `screencapture` location). This method
+    /// polls briefly for the new file, stores it in the blob store, runs
+    /// OCR, and writes the result as a `screenshot_select` action.
+    private func handleScreenshotSelect(database: Database, x: Double, y: Double, ts: TimeInterval) {
+        let cutoff = Date().addingTimeInterval(-3)
+        var pngURL: URL?
+
+        // Poll up to 2 seconds for the screenshot file to appear.
+        for _ in 0..<20 {
+            if let url = Self.latestScreenshot(after: cutoff) {
+                pngURL = url
+                break
+            }
+            Thread.sleep(forTimeInterval: 0.1)
+        }
+
+        var screenshotHash: String?
+        var ocrText: String?
+        let source: String
+
+        if let url = pngURL, let pngData = try? Data(contentsOf: url) {
+            screenshotHash = blobStore.store(png: pngData)
+
+            let (text, _) = OCRRunner.recognise(in: NSImage(data: pngData) ?? NSImage())
+            if !text.isEmpty {
+                ocrText = Redactor.redact(text)
+            }
+            source = "ocr"
+        } else {
+            source = "none"
+        }
+
+        let row = ActionRow(
+            recordingID: currentRecordingID,
+            sessionID: currentSessionID,
+            ts: ts,
+            kind: "screenshot_select",
+            x: x,
+            y: y,
+            appBundleID: nil,
+            appName: nil,
+            windowTitle: nil,
+            axRole: nil,
+            axSubrole: nil,
+            axIdentifier: nil,
+            axTitle: nil,
+            axValue: nil,
+            axHelp: nil,
+            axDomIdentifier: nil,
+            axDomClassList: nil,
+            axFrameJSON: nil,
+            url: pngURL?.path,
+            source: source,
+            screenshotHash: screenshotHash,
+            ocrText: ocrText
+        )
+
+        do {
+            try database.insertAction(row)
+        } catch {
+            NSLog("ActionEnricher: failed to insert screenshot_select action: \(error)")
+        }
+    }
+
+    /// The macOS screenshot directory (Desktop by default, or the path
+    /// set via `defaults write com.apple.screencapture location`).
+    static func screenshotDirectory() -> URL {
+        let fm = FileManager.default
+        let task = Process()
+        task.launchPath = "/usr/bin/defaults"
+        task.arguments = ["read", "com.apple.screencapture", "location"]
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.standardError = FileHandle.nullDevice
+        do {
+            try task.run()
+            task.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let path = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if task.terminationStatus == 0, !path.isEmpty,
+               fm.fileExists(atPath: path) {
+                return URL(fileURLWithPath: path, isDirectory: true)
+            }
+        } catch {}
+        return fm.homeDirectoryForCurrentUser.appendingPathComponent("Desktop")
+    }
+
+    /// Returns the most recent screenshot file created after `cutoff`.
+    private static func latestScreenshot(after cutoff: Date) -> URL? {
+        let dir = screenshotDirectory()
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: dir,
+            includingPropertiesForKeys: [.creationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return nil }
+
+        var best: (url: URL, date: Date)?
+        for url in contents where url.pathExtension.lowercased() == "png" {
+            guard let values = try? url.resourceValues(forKeys: [.creationDateKey]),
+                  let created = values.creationDate,
+                  created > cutoff else { continue }
+            if best == nil || created > best!.date {
+                best = (url, created)
+            }
+        }
+        return best?.url
+    }
+
+    // MARK: - Desktop screenshot scanner
+
+    /// Scans the screenshot directory for PNG files whose filenames start
+    /// with "Screenshot", skips any already in the database (by URL path),
+    /// and processes new ones with OCR + blob storage.
+    func scanDesktopScreenshots() {
+        queue.async { [weak self] in
+            guard let self, let database = self.database else { return }
+            let known = (try? database.knownScreenshotURLs()) ?? []
+            let dir = Self.screenshotDirectory()
+
+            guard let contents = try? FileManager.default.contentsOfDirectory(
+                at: dir,
+                includingPropertiesForKeys: [.creationDateKey],
+                options: [.skipsHiddenFiles]
+            ) else { return }
+
+            let screenshots = contents.filter {
+                $0.pathExtension.lowercased() == "png"
+                && $0.lastPathComponent.hasPrefix("Screenshot")
+                && !known.contains($0.path)
+            }
+
+            for url in screenshots {
+                guard let pngData = try? Data(contentsOf: url) else { continue }
+                let hash = self.blobStore.store(png: pngData)
+
+                let (text, _) = OCRRunner.recognise(in: NSImage(data: pngData) ?? NSImage())
+                let ocrText = text.isEmpty ? nil : Redactor.redact(text)
+
+                let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? Date()
+
+                let row = ActionRow(
+                    recordingID: nil,
+                    sessionID: self.currentSessionID,
+                    ts: created.timeIntervalSince1970,
+                    kind: "screenshot_select",
+                    x: nil,
+                    y: nil,
+                    appBundleID: nil,
+                    appName: nil,
+                    windowTitle: nil,
+                    axRole: nil,
+                    axSubrole: nil,
+                    axIdentifier: nil,
+                    axTitle: nil,
+                    axValue: nil,
+                    axHelp: nil,
+                    axDomIdentifier: nil,
+                    axDomClassList: nil,
+                    axFrameJSON: nil,
+                    url: url.path,
+                    source: ocrText != nil ? "ocr" : "none",
+                    screenshotHash: hash,
+                    ocrText: ocrText
+                )
+
+                do {
+                    try database.insertAction(row)
+                } catch {
+                    NSLog("ActionEnricher: failed to insert scanned screenshot: \(error)")
+                }
+            }
         }
     }
 
