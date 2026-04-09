@@ -24,11 +24,30 @@ struct RecordedEvent: Codable {
 
 /// A captured element on screen, produced by `ScreenReader`. These are
 /// lightweight snapshots meant to be easy for other apps to consume.
+///
+/// The extended identity fields (`subrole`, `identifier`, `help`, `url`,
+/// `domIdentifier`, `domClassList`) are what make snapshots useful as
+/// *historical context* — they let downstream tools match elements
+/// across sessions by stable handles rather than coordinates.
+///
+/// The app-level fields (`appBundleID`, `appName`, `pid`) are only
+/// populated on the root element of a snapshot.
 struct ScreenElement: Codable {
     var role: String
+    var subrole: String?
     var title: String?
     var value: String?
+    var identifier: String?
+    var help: String?
+    var url: String?
+    var domIdentifier: String?
+    var domClassList: [String]?
+    var isFocused: Bool?
+    var isSelected: Bool?
     var frame: CGRect
+    var appBundleID: String?
+    var appName: String?
+    var pid: Int32?
     var children: [ScreenElement]
 }
 

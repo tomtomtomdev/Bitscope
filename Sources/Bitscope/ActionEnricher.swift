@@ -66,6 +66,7 @@ final class ActionEnricher {
         guard let database else { return }
         let hit = ScreenReader.hitElement(at: CGPoint(x: x, y: y))
         let frameJSON = hit?.frame.flatMap(Self.encodeFrame)
+        let domClassJSON = hit?.domClassList.flatMap(Self.encodeStringArray)
 
         let row = ActionRow(
             recordingID: currentRecordingID,
@@ -82,6 +83,9 @@ final class ActionEnricher {
             axIdentifier: hit?.identifier,
             axTitle: hit?.title,
             axValue: hit?.value,
+            axHelp: hit?.help,
+            axDomIdentifier: hit?.domIdentifier,
+            axDomClassList: domClassJSON,
             axFrameJSON: frameJSON,
             url: hit?.url,
             source: hit == nil ? "none" : "ax",
@@ -102,6 +106,13 @@ final class ActionEnricher {
             "w": frame.size.width, "h": frame.size.height
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private static func encodeStringArray(_ strings: [String]) -> String? {
+        guard !strings.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: strings)
+        else { return nil }
         return String(data: data, encoding: .utf8)
     }
 }

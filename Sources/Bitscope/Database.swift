@@ -89,6 +89,17 @@ final class Database {
             try db.create(indexOn: "actions", columns: ["ax_identifier"])
         }
 
+        m.registerMigration("v2_ax_extended_fields") { db in
+            // Richer identity captured at click time. All nullable — rows
+            // created under v1 simply have these columns set to NULL.
+            try db.alter(table: "actions") { t in
+                t.add(column: "ax_help", .text)
+                t.add(column: "ax_dom_identifier", .text)
+                t.add(column: "ax_dom_class_list", .text) // JSON array
+            }
+            try db.create(indexOn: "actions", columns: ["ax_dom_identifier"])
+        }
+
         return m
     }
 
@@ -160,14 +171,17 @@ final class Database {
                     recording_id, session_id, ts, kind, x, y,
                     app_bundle_id, app_name, window_title,
                     ax_role, ax_subrole, ax_identifier, ax_title, ax_value,
+                    ax_help, ax_dom_identifier, ax_dom_class_list,
                     ax_frame_json, url, source, screenshot_hash, ocr_text
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, arguments: [
                     action.recordingID, action.sessionID, action.ts, action.kind,
                     action.x, action.y,
                     action.appBundleID, action.appName, action.windowTitle,
                     action.axRole, action.axSubrole, action.axIdentifier,
-                    action.axTitle, action.axValue, action.axFrameJSON, action.url,
+                    action.axTitle, action.axValue,
+                    action.axHelp, action.axDomIdentifier, action.axDomClassList,
+                    action.axFrameJSON, action.url,
                     action.source, action.screenshotHash, action.ocrText
                 ])
         }
@@ -191,9 +205,12 @@ struct ActionRow {
     var axIdentifier: String?
     var axTitle: String?
     var axValue: String?
+    var axHelp: String?
+    var axDomIdentifier: String?
+    var axDomClassList: String?   // JSON array of strings
     var axFrameJSON: String?
     var url: String?
-    var source: String        // "ax" | "ocr" | "hybrid"
+    var source: String            // "ax" | "ocr" | "hybrid" | "none"
     var screenshotHash: String?
     var ocrText: String?
 }

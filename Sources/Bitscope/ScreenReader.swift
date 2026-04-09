@@ -18,8 +18,11 @@ struct HitElement {
     var identifier: String?
     var title: String?
     var value: String?
+    var help: String?
     var frame: CGRect?
     var url: String?
+    var domIdentifier: String?
+    var domClassList: [String]?
 }
 
 enum ScreenReader {
@@ -46,8 +49,11 @@ enum ScreenReader {
         let identifier = string(element, kAXIdentifierAttribute as CFString)
         let title = string(element, kAXTitleAttribute as CFString)
         let value = string(element, kAXValueAttribute as CFString)
+        let help = string(element, kAXHelpAttribute as CFString)
         let frame = rect(element)
         let url = stringURL(element, kAXURLAttribute as CFString)
+        let domIdentifier = string(element, "AXDOMIdentifier" as CFString)
+        let domClassList = stringArray(element, "AXDOMClassList" as CFString)
         let windowTitle = enclosingWindowTitle(for: element)
 
         return HitElement(
@@ -60,8 +66,11 @@ enum ScreenReader {
             identifier: identifier,
             title: title,
             value: value,
+            help: help,
             frame: frame,
-            url: url
+            url: url,
+            domIdentifier: domIdentifier,
+            domClassList: domClassList
         )
     }
 
@@ -101,9 +110,14 @@ enum ScreenReader {
         else { return [] }
 
         let ax = AXUIElementCreateApplication(app.processIdentifier)
-        guard let root = element(from: ax, depth: 0, maxDepth: maxDepth) else {
+        guard var root = element(from: ax, depth: 0, maxDepth: maxDepth) else {
             return []
         }
+        // Stamp app-level identity onto the root so consumers don't have
+        // to guess where the snapshot came from.
+        root.appBundleID = app.bundleIdentifier
+        root.appName = app.localizedName
+        root.pid = app.processIdentifier
         return [root]
     }
 
@@ -111,8 +125,16 @@ enum ScreenReader {
                                 depth: Int,
                                 maxDepth: Int) -> ScreenElement? {
         let role = string(ax, kAXRoleAttribute as CFString) ?? "AXUnknown"
+        let subrole = string(ax, kAXSubroleAttribute as CFString)
         let title = string(ax, kAXTitleAttribute as CFString)
         let value = string(ax, kAXValueAttribute as CFString)
+        let identifier = string(ax, kAXIdentifierAttribute as CFString)
+        let help = string(ax, kAXHelpAttribute as CFString)
+        let url = stringURL(ax, kAXURLAttribute as CFString)
+        let domIdentifier = string(ax, "AXDOMIdentifier" as CFString)
+        let domClassList = stringArray(ax, "AXDOMClassList" as CFString)
+        let focused = bool(ax, kAXFocusedAttribute as CFString)
+        let selected = bool(ax, kAXSelectedAttribute as CFString)
         let frame = rect(ax)
 
         var children: [ScreenElement] = []
@@ -129,8 +151,24 @@ enum ScreenReader {
             }
         }
 
-        return ScreenElement(role: role, title: title, value: value,
-                             frame: frame, children: children)
+        return ScreenElement(
+            role: role,
+            subrole: subrole,
+            title: title,
+            value: value,
+            identifier: identifier,
+            help: help,
+            url: url,
+            domIdentifier: domIdentifier,
+            domClassList: domClassList,
+            isFocused: focused,
+            isSelected: selected,
+            frame: frame,
+            appBundleID: nil,
+            appName: nil,
+            pid: nil,
+            children: children
+        )
     }
 
     private static func string(_ ax: AXUIElement, _ attr: CFString) -> String? {
@@ -138,6 +176,23 @@ enum ScreenReader {
         guard AXUIElementCopyAttributeValue(ax, attr, &ref) == .success else { return nil }
         if let s = ref as? String { return s.isEmpty ? nil : s }
         return nil
+    }
+
+    private static func bool(_ ax: AXUIElement, _ attr: CFString) -> Bool? {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(ax, attr, &ref) == .success else { return nil }
+        if CFGetTypeID(ref!) == CFBooleanGetTypeID() {
+            return CFBooleanGetValue((ref as! CFBoolean))
+        }
+        return nil
+    }
+
+    private static func stringArray(_ ax: AXUIElement, _ attr: CFString) -> [String]? {
+        var ref: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(ax, attr, &ref) == .success else { return nil }
+        guard let arr = ref as? [Any] else { return nil }
+        let strings = arr.compactMap { $0 as? String }
+        return strings.isEmpty ? nil : strings
     }
 
     private static func rect(_ ax: AXUIElement) -> CGRect {
