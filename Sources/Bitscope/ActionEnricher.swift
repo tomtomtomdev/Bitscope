@@ -13,6 +13,7 @@ import AppKit
 ///   `leftDown` / `rightDown` / `otherDown`.
 final class ActionEnricher {
     private let database: Database?
+    private let blobStore = BlobStore()
     private let queue = DispatchQueue(label: "bitscope.actionenricher", qos: .utility)
 
     private(set) var currentSessionID: String?
@@ -64,9 +65,45 @@ final class ActionEnricher {
 
     private func handleClick(kind: String, x: Double, y: Double, ts: TimeInterval) {
         guard let database else { return }
-        let hit = ScreenReader.hitElement(at: CGPoint(x: x, y: y))
+        let point = CGPoint(x: x, y: y)
+        let hit = ScreenReader.hitElement(at: point)
         let frameJSON = hit?.frame.flatMap(Self.encodeFrame)
         let domClassJSON = hit?.domClassList.flatMap(Self.encodeStringArray)
+
+        // Decide whether the AX hit is rich enough or we need the
+        // screenshot + OCR fallback. Trigger when there's no hit at
+        // all, when the role is AXUnknown, or when the element has
+        // no title/value/identifier (meaning AX returned a shell).
+        let axIsEmpty = hit == nil
+            || hit?.role == nil
+            || hit?.role == "AXUnknown"
+        let axIsShallow = !axIsEmpty
+            && hit?.title == nil
+            && hit?.value == nil
+            && hit?.identifier == nil
+
+        var screenshotHash: String?
+        var ocrText: String?
+        var source: String = hit == nil ? "none" : "ax"
+
+        if axIsEmpty || axIsShallow {
+            if let pngData = ScreenCapture.capturePatch(around: point) {
+                screenshotHash = blobStore.store(png: pngData)
+
+                // Run Vision OCR on the captured patch.
+                if let tiff = NSImage(data: pngData).flatMap({ img -> NSBitmapImageRep? in
+                    NSBitmapImageRep(data: img.tiffRepresentation ?? Data())
+                }), let cg = tiff.cgImage {
+                    let results = OCRRunner.recognise(in: cg)
+                    let text = results.map(\.text).joined(separator: "\n")
+                    if !text.isEmpty {
+                        ocrText = text
+                    }
+                }
+
+                source = axIsEmpty ? "ocr" : "hybrid"
+            }
+        }
 
         let row = ActionRow(
             recordingID: currentRecordingID,
@@ -88,9 +125,9 @@ final class ActionEnricher {
             axDomClassList: domClassJSON,
             axFrameJSON: frameJSON,
             url: hit?.url,
-            source: hit == nil ? "none" : "ax",
-            screenshotHash: nil,
-            ocrText: nil
+            source: source,
+            screenshotHash: screenshotHash,
+            ocrText: ocrText
         )
 
         do {

@@ -12,15 +12,18 @@
 		5E7BE7F3AD8747343FA5A314 /* ActionEnricher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9B686DF94707CAE7BAF74C /* ActionEnricher.swift */; };
 		7D441E742BD2490143EFDD82 /* Recording.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F74925DF3E903F1B03DEC1F /* Recording.swift */; };
 		83AB64FB07ADB747FEC79BCB /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = F055685992C142ED18A3FB81 /* Database.swift */; };
+		8474942B85295BBC9F1C505F /* OCRRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A220E413E79D180471905BA /* OCRRunner.swift */; };
 		9FD10DBA0ECBD9E706B1707A /* RecordingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A951D222A8D4DD8AAD79E5 /* RecordingStore.swift */; };
 		A9FF00CC6B11B48AF41F5D99 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BEA7BC73B24023EFE4F4300 /* main.swift */; };
 		AF36FFA880182158132DEAC5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B7BBAD814E194767539682 /* ContentView.swift */; };
 		B5725E601C6967B1CAE6E298 /* JSONLExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 704B6A7D2C4798317DB94247 /* JSONLExporter.swift */; };
+		B87FF7A607A83EA3D5CB05DA /* BlobStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1487B95BBC4282F8C81E939 /* BlobStore.swift */; };
 		B9C565229CAC5968CB2A2150 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A59AA73AEA287C96278D31B1 /* GRDB */; };
 		DA45BFFAFBCDB8D67E4E6EB7 /* ScreenReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B4119D120032A3509A2F22 /* ScreenReader.swift */; };
 		E126DB1CCFF40045DDED3628 /* EventRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95FBC48E8D1C6480C35A61A1 /* EventRecorder.swift */; };
 		E7CC00D28DEC47CCE2204F14 /* ClickLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925BC6D618D97EAFFF9021B9 /* ClickLogger.swift */; };
 		F3CEA51FCBF06E1BECBDFCB2 /* EventPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ABEF484FBDACBF40285F4B8 /* EventPlayer.swift */; };
+		FF10F0BD4B6D596EB987289F /* ScreenCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A142BFA38ED805376C2A6A95 /* ScreenCapture.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,7 +38,10 @@
 		7C3E2617C5DF70220D0F8C89 /* PermissionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		925BC6D618D97EAFFF9021B9 /* ClickLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClickLogger.swift; sourceTree = "<group>"; };
 		95FBC48E8D1C6480C35A61A1 /* EventRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRecorder.swift; sourceTree = "<group>"; };
+		9A220E413E79D180471905BA /* OCRRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRRunner.swift; sourceTree = "<group>"; };
+		A142BFA38ED805376C2A6A95 /* ScreenCapture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCapture.swift; sourceTree = "<group>"; };
 		A3683AD26F74F8A1FED79767 /* Bitscope.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bitscope.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C1487B95BBC4282F8C81E939 /* BlobStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlobStore.swift; sourceTree = "<group>"; };
 		F055685992C142ED18A3FB81 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
 		FAE22C05D3F9DDAC21A9788A /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -65,6 +71,7 @@
 			children = (
 				5C9B686DF94707CAE7BAF74C /* ActionEnricher.swift */,
 				FAE22C05D3F9DDAC21A9788A /* AppModel.swift */,
+				C1487B95BBC4282F8C81E939 /* BlobStore.swift */,
 				925BC6D618D97EAFFF9021B9 /* ClickLogger.swift */,
 				28B7BBAD814E194767539682 /* ContentView.swift */,
 				F055685992C142ED18A3FB81 /* Database.swift */,
@@ -72,9 +79,11 @@
 				95FBC48E8D1C6480C35A61A1 /* EventRecorder.swift */,
 				704B6A7D2C4798317DB94247 /* JSONLExporter.swift */,
 				2BEA7BC73B24023EFE4F4300 /* main.swift */,
+				9A220E413E79D180471905BA /* OCRRunner.swift */,
 				7C3E2617C5DF70220D0F8C89 /* PermissionManager.swift */,
 				0F74925DF3E903F1B03DEC1F /* Recording.swift */,
 				32A951D222A8D4DD8AAD79E5 /* RecordingStore.swift */,
+				A142BFA38ED805376C2A6A95 /* ScreenCapture.swift */,
 				37B4119D120032A3509A2F22 /* ScreenReader.swift */,
 			);
 			path = Bitscope;
@@ -162,15 +171,18 @@
 			files = (
 				5E7BE7F3AD8747343FA5A314 /* ActionEnricher.swift in Sources */,
 				5410382400B37BA4FEB740ED /* AppModel.swift in Sources */,
+				B87FF7A607A83EA3D5CB05DA /* BlobStore.swift in Sources */,
 				E7CC00D28DEC47CCE2204F14 /* ClickLogger.swift in Sources */,
 				AF36FFA880182158132DEAC5 /* ContentView.swift in Sources */,
 				83AB64FB07ADB747FEC79BCB /* Database.swift in Sources */,
 				F3CEA51FCBF06E1BECBDFCB2 /* EventPlayer.swift in Sources */,
 				E126DB1CCFF40045DDED3628 /* EventRecorder.swift in Sources */,
 				B5725E601C6967B1CAE6E298 /* JSONLExporter.swift in Sources */,
+				8474942B85295BBC9F1C505F /* OCRRunner.swift in Sources */,
 				543EB198583D68E3B7043EF8 /* PermissionManager.swift in Sources */,
 				7D441E742BD2490143EFDD82 /* Recording.swift in Sources */,
 				9FD10DBA0ECBD9E706B1707A /* RecordingStore.swift in Sources */,
+				FF10F0BD4B6D596EB987289F /* ScreenCapture.swift in Sources */,
 				DA45BFFAFBCDB8D67E4E6EB7 /* ScreenReader.swift in Sources */,
 				A9FF00CC6B11B48AF41F5D99 /* main.swift in Sources */,
 			);

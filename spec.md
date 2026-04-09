@@ -60,9 +60,12 @@ Bitscope spec
 
 ### Planned (not yet implemented)
 
-- [ ] Step 6: screenshot + Vision OCR fallback when the AX tree at a
-      click site is empty or `AXUnknown`; populate reserved
-      `screenshot_hash` / `ocr_text` columns
+- [x] **Screenshot + Vision OCR fallback** — when the AX hit is nil,
+      `AXUnknown`, or has no title/value/identifier, captures a 400×400
+      patch via `CGWindowListCreateImage`, stores it content-addressed
+      under `blobs/`, runs `VNRecognizeTextRequest`, and writes
+      `screenshot_hash` + `ocr_text` into the action row
+      (`source = "ocr"` or `"hybrid"`)
 - [ ] Step 7: retention policy, per-app deny list, OCR redaction
       (emails, tokens, card numbers) before persistence
 - [ ] FTS5 virtual table over `ax_title` / `ax_value` / `ocr_text` /

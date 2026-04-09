@@ -28,6 +28,7 @@ final class AppModel: ObservableObject {
     /// disabled" rather than taking down the whole app.
     private let database: Database?
     private let enricher: ActionEnricher
+    private let blobStore = BlobStore()
     private let jsonlExporter: JSONLExporter?
 
     init() {
@@ -248,6 +249,7 @@ final class AppModel: ObservableObject {
         store.deleteAll()
         ClickLogger.shared.clear()
         try? database?.deleteAllRecordings()
+        blobStore.deleteAll()
         status = "All recordings deleted"
     }
 
