@@ -1,0 +1,31 @@
+name: Bitscope
+options:
+  bundleIdPrefix: com.bitscope
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  Bitscope:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Bitscope
+    settings:
+      base:
+        PRODUCT_NAME: Bitscope
+        PRODUCT_BUNDLE_IDENTIFIER: com.bitscope.Bitscope
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
