@@ -19,8 +19,12 @@ final class ActionEnricher {
     private(set) var currentSessionID: String?
     private var currentRecordingID: String?
 
+    /// Cached deny list — refreshed once per session start.
+    private var denyList: Set<String> = []
+
     init(database: Database?) {
         self.database = database
+        self.denyList = database?.denyListBundleIDs() ?? []
     }
 
     // MARK: - Session
@@ -67,6 +71,10 @@ final class ActionEnricher {
         guard let database else { return }
         let point = CGPoint(x: x, y: y)
         let hit = ScreenReader.hitElement(at: point)
+
+        // Deny-list check: silently skip capture for sensitive apps.
+        if let bid = hit?.appBundleID, denyList.contains(bid) { return }
+
         let frameJSON = hit?.frame.flatMap(Self.encodeFrame)
         let domClassJSON = hit?.domClassList.flatMap(Self.encodeStringArray)
 
@@ -95,9 +103,10 @@ final class ActionEnricher {
                     NSBitmapImageRep(data: img.tiffRepresentation ?? Data())
                 }), let cg = tiff.cgImage {
                     let results = OCRRunner.recognise(in: cg)
-                    let text = results.map(\.text).joined(separator: "\n")
-                    if !text.isEmpty {
-                        ocrText = text
+                    let raw = results.map(\.text).joined(separator: "\n")
+                    if !raw.isEmpty {
+                        // Scrub sensitive patterns before persistence.
+                        ocrText = Redactor.redact(raw)
                     }
                 }
 

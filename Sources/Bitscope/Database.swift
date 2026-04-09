@@ -101,13 +101,61 @@ final class Database {
         }
 
         m.registerMigration("v3_meta_kv") { db in
-            // Generic key-value table for cursors and small bits of
-            // persistent state that don't deserve their own table —
-            // e.g. the JSONL exporter's high-water-mark action id.
             try db.create(table: "meta") { t in
                 t.column("key", .text).primaryKey()
                 t.column("value", .text).notNull()
             }
+        }
+
+        m.registerMigration("v4_fts5_deny_list") { db in
+            // Full-text search over the fields that downstream agents
+            // are most likely to query in natural language.
+            try db.execute(sql: """
+                CREATE VIRTUAL TABLE IF NOT EXISTS actions_fts USING fts5(
+                    ax_title, ax_value, ocr_text, window_title,
+                    content='actions', content_rowid='id'
+                )
+                """)
+
+            // Keep FTS index in sync via triggers. Cascading deletes
+            // from recordings already go through DELETE on actions, so
+            // the delete trigger covers those too.
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS actions_ai AFTER INSERT ON actions BEGIN
+                    INSERT INTO actions_fts(rowid, ax_title, ax_value, ocr_text, window_title)
+                    VALUES (new.id, new.ax_title, new.ax_value, new.ocr_text, new.window_title);
+                END
+                """)
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS actions_ad AFTER DELETE ON actions BEGIN
+                    INSERT INTO actions_fts(actions_fts, rowid, ax_title, ax_value, ocr_text, window_title)
+                    VALUES ('delete', old.id, old.ax_title, old.ax_value, old.ocr_text, old.window_title);
+                END
+                """)
+            try db.execute(sql: """
+                CREATE TRIGGER IF NOT EXISTS actions_au AFTER UPDATE ON actions BEGIN
+                    INSERT INTO actions_fts(actions_fts, rowid, ax_title, ax_value, ocr_text, window_title)
+                    VALUES ('delete', old.id, old.ax_title, old.ax_value, old.ocr_text, old.window_title);
+                    INSERT INTO actions_fts(rowid, ax_title, ax_value, ocr_text, window_title)
+                    VALUES (new.id, new.ax_title, new.ax_value, new.ocr_text, new.window_title);
+                END
+                """)
+
+            // Seed the deny list with common sensitive apps.
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO meta (key, value) VALUES (
+                    'deny_list_bundle_ids',
+                    '["com.1password.1password","com.apple.keychainaccess","com.apple.Safari.PrivateBrowsing"]'
+                )
+                """)
+
+            // Retention defaults (in days).
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO meta (key, value) VALUES ('retention_screenshots_days', '30')
+                """)
+            try db.execute(sql: """
+                INSERT OR IGNORE INTO meta (key, value) VALUES ('retention_actions_days', '90')
+                """)
         }
 
         return m
@@ -190,6 +238,32 @@ final class Database {
                 INSERT INTO meta (key, value) VALUES (?, ?)
                 ON CONFLICT(key) DO UPDATE SET value = excluded.value
                 """, arguments: [key, value])
+        }
+    }
+
+    // MARK: - Deny list
+
+    /// Returns the set of bundle IDs that should never be captured.
+    func denyListBundleIDs() -> Set<String> {
+        guard let raw = getMeta("deny_list_bundle_ids"),
+              let data = raw.data(using: .utf8),
+              let arr = try? JSONSerialization.jsonObject(with: data) as? [String]
+        else { return [] }
+        return Set(arr)
+    }
+
+    // MARK: - Free-text search
+
+    /// FTS5 search across `ax_title`, `ax_value`, `ocr_text` and
+    /// `window_title`. Returns matching action IDs ordered by relevance.
+    func searchActions(query: String, limit: Int = 50) throws -> [Int64] {
+        try dbQueue.read { db in
+            try Int64.fetchAll(db, sql: """
+                SELECT rowid FROM actions_fts
+                 WHERE actions_fts MATCH ?
+                 ORDER BY rank
+                 LIMIT ?
+                """, arguments: [query, limit])
         }
     }
 

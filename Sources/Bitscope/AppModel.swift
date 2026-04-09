@@ -46,6 +46,11 @@ final class AppModel: ObservableObject {
         self.enricher.startSession()
         // Export any actions that accumulated since the last launch.
         jsonlExporter?.exportPending()
+        // Enforce retention policy (deletes old blobs + action rows).
+        if let db {
+            let retention = RetentionManager(database: db, blobStore: blobStore)
+            DispatchQueue.global(qos: .utility).async { retention.enforce() }
+        }
         startPermissionPolling()
     }
 

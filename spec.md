@@ -66,7 +66,19 @@ Bitscope spec
       under `blobs/`, runs `VNRecognizeTextRequest`, and writes
       `screenshot_hash` + `ocr_text` into the action row
       (`source = "ocr"` or `"hybrid"`)
-- [ ] Step 7: retention policy, per-app deny list, OCR redaction
-      (emails, tokens, card numbers) before persistence
-- [ ] FTS5 virtual table over `ax_title` / `ax_value` / `ocr_text` /
-      `window_title` for free-text queries
+- [x] **Retention policy** — `RetentionManager` runs on launch;
+      screenshots expire after 30 days (NULL-ifies `screenshot_hash`,
+      deletes unreferenced blobs), action rows expire after 90 days;
+      configurable via `meta` keys `retention_screenshots_days` /
+      `retention_actions_days`
+- [x] **Per-app deny list** — `meta['deny_list_bundle_ids']` (JSON
+      array); defaults to 1Password, Keychain Access, Safari Private
+      Browsing; checked in `ActionEnricher` — clicks in denied apps
+      are silently dropped
+- [x] **OCR text redaction** — `Redactor` scrubs emails, card numbers,
+      bearer tokens, AWS keys, and generic secret=value pairs before
+      OCR text is written to SQLite or JSONL
+- [x] **FTS5 full-text search** — `actions_fts` virtual table over
+      `ax_title`, `ax_value`, `ocr_text`, `window_title` with
+      insert/delete/update triggers; `Database.searchActions(query:)`
+      returns matching action IDs by relevance
