@@ -97,7 +97,6 @@ Bitscope spec
       - CLI: `Bitscope --stocks` (stdout) or `--stocks-save` (→ `stock-picks.json`)
       - JSON format: `{ file, screenerType, stocks: [{ symbol, rank, netForeignBuy, foreignFlow, ... }] }` 
 
-### Planned (not yet implemented)
 
 - [x] implement file watcher in app that observe new screenshots in Desktop/ and process it to json
       - `ScreenshotWatcher.swift` uses `DispatchSource.makeFileSystemObjectSource` to monitor ~/Desktop
@@ -105,3 +104,24 @@ Bitscope spec
       - Results appended to `~/Desktop/stock-picks.json`
       - UI toggle: "Watch" button in header (eye icon, green when active)
       - `AppModel.toggleScreenshotWatcher()` to start/stop
+
+
+- [x] Quant trading system based on bandar/institution money flow stages
+      - `TradingModel.swift` - Wyckoff-inspired flow stage detection:
+        - Accumulation (BUY) - foreign flow turning positive
+        - Markup (HOLD) - sustained strong buying
+        - Distribution (SELL) - flow weakening
+        - Markdown (AVOID) - foreign outflow
+      - `Backtester.swift` - historical simulation with:
+        - Portfolio-level metrics (CAGR, Sharpe, Sortino, max drawdown)
+        - Per-stock trade analysis and win rate
+        - Parameter optimization via grid search
+      - CLI commands:
+        - `--trade-import` - import latest data
+        - `--trade-analyze` - generate trading report
+        - `--trade-signals` - export signals as JSON
+        - `--trade-backtest` - run historical simulation
+      - Model persists history at `~/Library/Application Support/Bitscope/trading/`
+      - Requires multiple days of data for meaningful signals
+
+### Planned (not yet implemented)

@@ -24,6 +24,81 @@ if CommandLine.arguments.contains("--stocks-save") {
     }
 }
 
+// Trading model commands
+if CommandLine.arguments.contains("--trade-import") {
+    let model = TradingModel()
+    let count = model.importLatestData()
+    print("Imported \(count) new data points")
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--trade-analyze") {
+    let model = TradingModel()
+    _ = model.importLatestData()  // Import latest first
+    print(model.generateReport())
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--trade-signals") {
+    let model = TradingModel()
+    _ = model.importLatestData()
+    print(model.exportAnalysisJSON())
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--trade-backtest") {
+    let model = TradingModel()
+    _ = model.importLatestData()
+    let backtester = Backtester(model: model)
+
+    print("Running backtest on imported data...")
+
+    // Run portfolio backtest
+    let result = backtester.backtestPortfolio(stockHistory: model.stockHistory)
+    print(backtester.generateBacktestReport(result: result))
+
+    // Also show current signals
+    let analysis = model.analyzeAll()
+    print("\n\nCURRENT SIGNAL DISTRIBUTION")
+    print("-".padding(toLength: 40, withPad: "-", startingAt: 0))
+    let buys = analysis.filter { $0.signal == .buy }.count
+    let holds = analysis.filter { $0.signal == .hold }.count
+    let sells = analysis.filter { $0.signal == .sell }.count
+    let avoids = analysis.filter { $0.signal == .avoid }.count
+    print("  BUY: \(buys), HOLD: \(holds), SELL: \(sells), AVOID: \(avoids)")
+
+    print("\nTOP BUY SIGNALS:")
+    for stock in analysis.filter({ $0.signal == .buy }).prefix(5) {
+        print("  \(stock.signal.emoji) \(stock.symbol): \(stock.stage.description)")
+        print("     Confidence: \(String(format: "%.0f%%", stock.confidence * 100))")
+    }
+
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--help") || CommandLine.arguments.contains("-h") {
+    print("""
+    Bitscope - Screen Recording & Stock Analysis
+
+    USAGE:
+      Bitscope                    Launch GUI app
+      Bitscope [OPTIONS]          CLI mode
+
+    SCREENSHOT RECOGNITION:
+      --recognize                 OCR all Desktop screenshots to JSON
+      --stocks                    Extract stock picks to stdout
+      --stocks-save               Save stock picks to ~/Desktop/stock-picks.json
+
+    TRADING MODEL:
+      --trade-import              Import latest stock data into model
+      --trade-analyze             Generate trading signals report
+      --trade-signals             Export signals as JSON
+      --trade-backtest            Run backtest on historical data
+
+    """)
+    exit(0)
+}
+
 /// Bitscope is a menu-bar-only app: no dock icon, no main window. All UI
 /// is presented through a popover attached to an `NSStatusItem`.
 @MainActor
