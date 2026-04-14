@@ -87,4 +87,7 @@ Bitscope spec
 
 ### Planned (not yet implemented)
 
-- [ ] 
+- [x] Remove screen recording permission prompt on record — `ScreenCapture`
+      now checks `CGPreflightScreenCaptureAccess()` before calling
+      `CGWindowListCreateImage`; returns nil gracefully if not granted
+      (no audio recording code exists in the project)

@@ -5,15 +5,30 @@ import CoreGraphics
 /// 400×400 pt patch centred on the click rather than the full window —
 /// smaller, faster, fewer privacy concerns.
 ///
-/// On macOS 10.15+ this requires Screen Recording permission. If the app
-/// doesn't have it, `CGWindowListCreateImage` returns a nil or
-/// fully-transparent image — we detect that and return nil gracefully.
+/// On macOS 10.15+ this requires Screen Recording permission. We check
+/// permission upfront via `CGPreflightScreenCaptureAccess()` and skip
+/// capture entirely if not granted — this avoids triggering the system
+/// permission dialog during recording.
 enum ScreenCapture {
     private static let patchSize: CGFloat = 400
 
+    /// Returns true if the app has Screen Recording permission, false
+    /// otherwise. Does NOT prompt the user — use this to check before
+    /// attempting capture.
+    static var hasPermission: Bool {
+        CGPreflightScreenCaptureAccess()
+    }
+
     /// Returns a PNG `Data` blob of the region around `point`, or nil if
     /// capture failed (no permission, off-screen, etc.).
+    ///
+    /// Important: This will NOT trigger a permission prompt. If Screen
+    /// Recording permission hasn't been granted, returns nil immediately.
     static func capturePatch(around point: CGPoint) -> Data? {
+        // Check permission upfront to avoid triggering the system dialog.
+        // CGWindowListCreateImage would prompt on first call otherwise.
+        guard hasPermission else { return nil }
+
         let half = patchSize / 2
         let rect = CGRect(
             x: point.x - half,
