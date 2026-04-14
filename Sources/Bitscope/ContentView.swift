@@ -27,6 +27,13 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            // Screenshot watcher toggle
+            Button(action: { model.toggleScreenshotWatcher() }) {
+                Label(model.isWatchingScreenshots ? "Watching" : "Watch",
+                      systemImage: model.isWatchingScreenshots ? "eye.fill" : "eye")
+                    .foregroundColor(model.isWatchingScreenshots ? .green : .primary)
+            }
+            .help("Watch Desktop for new screenshots and extract stock data")
             // Hide the record button entirely when Accessibility isn't
             // granted — clicking it would only surface a permission error.
             if model.isTrusted {

@@ -85,9 +85,23 @@ Bitscope spec
       (global + local `NSEvent` monitors); prioritises stopping playback
       if both states are somehow active
 
-### Planned (not yet implemented)
-
 - [x] Remove screen recording permission prompt on record — `ScreenCapture`
       now checks `CGPreflightScreenCaptureAccess()` before calling
       `CGWindowListCreateImage`; returns nil gracefully if not granted
       (no audio recording code exists in the project)
+
+
+- [x] implement information recognition for sample images in Desktop/ with result format in json, matching name Screenshot*.png
+      - `ImageRecognizer.swift` scans `~/Desktop/Screenshot*.png`
+      - Extracts stock tickers (4-letter symbols) and associated flow data
+      - CLI: `Bitscope --stocks` (stdout) or `--stocks-save` (→ `stock-picks.json`)
+      - JSON format: `{ file, screenerType, stocks: [{ symbol, rank, netForeignBuy, foreignFlow, ... }] }` 
+
+### Planned (not yet implemented)
+
+- [x] implement file watcher in app that observe new screenshots in Desktop/ and process it to json
+      - `ScreenshotWatcher.swift` uses `DispatchSource.makeFileSystemObjectSource` to monitor ~/Desktop
+      - Auto-detects new `Screenshot*.png` files and processes them via `ImageRecognizer`
+      - Results appended to `~/Desktop/stock-picks.json`
+      - UI toggle: "Watch" button in header (eye icon, green when active)
+      - `AppModel.toggleScreenshotWatcher()` to start/stop

@@ -8,6 +8,7 @@ final class AppModel: ObservableObject {
     @Published var isTrusted: Bool = PermissionManager.isTrusted
     @Published var isRecording = false
     @Published var isPlaying = false
+    @Published var isWatchingScreenshots = false
     @Published var status: String = "Idle"
 
     /// Called whenever user-visible state (recording/playing) changes so the
@@ -17,6 +18,7 @@ final class AppModel: ObservableObject {
     let store = RecordingStore()
     private let recorder = EventRecorder()
     private let player = EventPlayer()
+    private let screenshotWatcher = ScreenshotWatcher()
     private var permissionTimer: Timer?
     /// Guard against re-prompting. The system Accessibility prompt is shown
     /// at most once per app session; after that users are directed to
@@ -52,12 +54,42 @@ final class AppModel: ObservableObject {
             DispatchQueue.global(qos: .utility).async { retention.enforce() }
         }
         startPermissionPolling()
+        setupScreenshotWatcher()
+    }
+
+    private func setupScreenshotWatcher() {
+        screenshotWatcher.onProcessed = { [weak self] fileName in
+            Task { @MainActor in
+                self?.status = "Processed \(fileName)"
+            }
+        }
+    }
+
+    func toggleScreenshotWatcher() {
+        if isWatchingScreenshots {
+            stopScreenshotWatcher()
+        } else {
+            startScreenshotWatcher()
+        }
+    }
+
+    func startScreenshotWatcher() {
+        screenshotWatcher.start()
+        isWatchingScreenshots = true
+        status = "Watching Desktop for screenshots"
+    }
+
+    func stopScreenshotWatcher() {
+        screenshotWatcher.stop()
+        isWatchingScreenshots = false
+        status = "Screenshot watcher stopped"
     }
 
     /// Called from `AppDelegate.applicationWillTerminate` so the running
     /// session gets a proper end timestamp.
     func shutdown() {
         enricher.endSession()
+        screenshotWatcher.stop()
     }
 
     /// Polls `AXIsProcessTrusted()` so the UI reflects permission being

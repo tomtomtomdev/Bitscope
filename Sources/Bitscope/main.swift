@@ -1,6 +1,29 @@
 import AppKit
 import SwiftUI
 
+// CLI mode: process Desktop screenshots and output JSON
+if CommandLine.arguments.contains("--recognize") {
+    let json = ImageRecognizer.processDesktopScreenshots()
+    print(json)
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--stocks") {
+    let json = ImageRecognizer.extractStockPicks()
+    print(json)
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--stocks-save") {
+    if let url = ImageRecognizer.processAndSave() {
+        print("Saved to: \(url.path)")
+        exit(0)
+    } else {
+        fputs("Failed to save stock picks\n", stderr)
+        exit(1)
+    }
+}
+
 /// Bitscope is a menu-bar-only app: no dock icon, no main window. All UI
 /// is presented through a popover attached to an `NSStatusItem`.
 @MainActor
